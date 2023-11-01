@@ -1,0 +1,35 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_push_images:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Build and Push Docker Images
+      env:
+        REGISTRY_URL: your.private.registry
+        REGISTRY_USERNAME: your-registry-username
+        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      run: |
+        docker login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $REGISTRY_URL
+
+        for service_dir in services/*; do
+          if [ -f "$service_dir/Dockerfile" ]; then
+            service_name=$(basename $service_dir)
+            image_name="$REGISTRY_URL/$service_name:latest"
+            
+            docker build -t $image_name $service_dir
+            docker push $image_name
+          fi
+        done
+
+    - name: Cleanup
+      run: docker system prune -f

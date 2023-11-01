@@ -1,0 +1,8 @@
+# sumologic-configuration.yaml
+logs:
+  - source: /var/log/my-application.log
+    sourceCategory: k8s/my-app
+    sourcetype: my-app-logs
+  - source: /var/log/another-app.log
+    sourceCategory: k8s/another-app
+    sourcetype: another-app-logs

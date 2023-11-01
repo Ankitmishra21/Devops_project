@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sumologic
+data:
+  SUMO_ACCESSID: YOUR_ACCESS_ID
+  SUMO_ACCESSKEY: YOUR_ACCESS_KEY
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sumologic
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sumologic
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sumologic
+subjects:
+  - kind: ServiceAccount
+    name: sumologic
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: sumologic
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: sumologic-fluentd
+spec:
+  selector:
+    matchLabels:
+      name: fluentd
+  template:
+    metadata:
+      labels:
+        name: fluentd
+    spec:
+      serviceAccount: sumologic
+      serviceAccountName: sumologic
+      containers:
+        - name: sumologic-fluentd
+          image: fluent/fluentd-kubernetes-daemonset:v1.12-debian-elasticsearch
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 200m
+          envFrom:
+            - secretRef:
+                name: sumologic
+          volumeMounts:
+            - name: config-volume
+              mountPath: /fluentd/etc/fluent.conf
+            - name: varlog
+              mountPath: /var/log
+      volumes:
+        - name: config-volume
+          configMap:
+            name: fluentd-conf
+        - name: varlog
+          hostPath:
+            path: /var/log
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-conf
+data:
+  fluent.conf: |
+    @type sumologic
+    endpoint https://endpoint.collection.us2.sumologic.com/receiver/v1/http/YOUR_COLLECTOR_ID
+    source_category %s
+    source_name %s
+    validate_endpoints true

@@ -1,0 +1,4 @@
+controller:
+  serviceType: LoadBalancer
+  adminUser: admin
+  adminPassword: password
